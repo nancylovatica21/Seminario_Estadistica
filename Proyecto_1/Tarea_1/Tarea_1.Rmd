@@ -1,0 +1,246 @@
+---
+title: "Tarea 1B. Introducción a los modelos lineales generalizados"
+author: "Equipo 1"
+output:
+  pdf_document:
+    latex_engine: xelatex
+date: "`r Sys.Date()`"
+
+header-incluides:
+  - \documentclass[letterpaper,11pt]{article}
+  - \usepackage[utf8]{inputenc}
+  - \usepackage[T1]{fontenc}
+  - \usepackage{mathtools}
+  - \usepackage{commath}
+  - \usepackage[spanish,mexico]{babel} \spanishdecimal{.}
+  - \selectlanguage{spanish}
+---
+
+```{r setup, include=FALSE}
+#Limpiamos entorno
+rm(list = ls(all.names = TRUE))
+gc() #Liberamos memoria
+
+#Este chunk lo explicaremos más adelante
+knitr::opts_chunk$set(
+	echo = F,
+	fig.align = "center",
+	fig.dim = c(7.0, 7.0),
+	fig.pos='H',
+#Agregamos configuraciones para evitar mensajes de advertencias y de errores en el archivo
+	message = FALSE,
+	warning = FALSE,
+	error = F
+)
+library(ggplot2)
+#Elegimos nuestra carpeta
+#setwd()
+```
+
+# Integrantes
+
+-   Alvarado Palacios Fernando
+-   Cortés Silva Edson Andre
+-   García Rodriguez Sebastian
+-   Jaime Vera Nancy Jaqueline
+-   Ornelas Clement Anthonie Byron
+
+\newpage
+
+## 1. Regresión lineal múltiple
+
+La base de datos _Preg1B.csv_ contiene información sobre 350 pacientes seleccionados de forma aleatoria.
+Se desea analizar si existe una asociación entre la presión arterial diastólica (bpdiast) y el índice de masa corporal (bmi),
+en particular, si es posible observar que tener un índice de masa corporal alto se asocia con una alta presión arterial diastólica.
+Para realizar este análisis se indica que se considere el sexo (sex: 1-hombre, 2-mujer) y la edad (age) de los pacientes,
+pues la presión arterial diastólica podría variar de acuerdo
+con estos factores.
+
+i. Ajuste el modelo de regresión lineal múltiple para 
+$\mathbb{E}$(`bpdiast`; `bmi`, `sex`, `age`),
+donde las variables `bmi` y `age` entran sin modificación alguna y sin interacciones entre ellas ni con la variable `sex`.
+Indique si este modelo parece adecuado para realizar el análisis solicitado.
+En caso afirmativo, pase a inciso iii).
+
+ii. En caso de que considere que el modelo en i) no es adecuado,
+presente un modelo que le parezca adecuado,
+donde de ser necesario se transformen las variables `bpdiast`, `bmi` o `age`.
+Por simplicidad no considere en el modelo interacciones entre las variables.
+Tanto en i) como en este inciso, revisar la linealidad de forma global y también analizando por cada covariable continua.
+
+iii. ¿Se puede indicar que para una persona de cierta edad y sexo,
+tener un índice de masa corporal alto se asocia con una alta presión arterial diastólica?
+Argumente su respuesta, indicando con claridad la prueba o pruebas de hipótesis usadas y las hipótesis que se están contrastando.
+
+iv. Para complementar la interpretación de los resultados del inciso iii),
+presente una gráfica resumen con la estimación puntual asociada a la relación entre `bpdiast` y `bmi`.
+Para esto considere sólo tres posibles edades: 30, 45 y 65,
+así como la diferenciación entre mujeres y hombres.
+Comente e interprete lo que observa en la gráfica,
+indicando con claridad a qué parámetro corresponde la curva/recta.
+
+\newpage
+
+## 2. Modelos lineales generalizados para datos continuos
+
+Considere los mismos datos que en la pregunta 1.
+
+i. Explorando los diferentes modelos lineales generalizados comúnmente usados cuando la variable dependiente es continua (normal, gamma, inversa gaussiana),
+presente un modelo que le parezca adecuado para modelar
+$\mathbb{E}$(`bpdiast`; `bmi`, `sex`, `age`).
+    
+    a. Considere por simplicidad que no hay interacción entre las covariables del modelo.
+    
+    b. Deberá explorar la transformación de ambas covariables: `bmi` y `age`.
+    
+    c. Deberá describir el procedimiento y criterio usado para seleccionar el modelo.
+    
+    d. Deberá argumentar que el modelo satisface los supuestos.
+    
+    e. Deberá indicar con claridad cuál es la expresión matemática que se usa para modelar $\mathbb{E}$(`bpdiast`; `bmi`, `sex`, `age`).
+    
+ii. Repita los incisos iii) y iv) de la pregunta 1 con el modelo en i).
+
+iii. Comparando el modelo en i) con el usado en la pregunta 1,
+compare las conclusiones e interpretaciones que se pueden obtener e indique qué modelo prefiere usar.
+Argumente con claridad su respuesta, por ejemplo, debe incluir los valores de AIC o BIC,
+así como ventajas y desventajas en la interpretación.
+
+\newpage
+
+## 3. Modelos lineales generalizados para datos binarios
+
+La base de datos _Preg3vB.csv_ contiene información sobre 952 insectos que fueron expuestos a diferentes dosis (`Deposit`, `mg`) de tres insecticidas (`Insecticide`).
+La asignación a una dosis y al tipo de insecticida se realizó de forma aleatoria.
+Después de seis días se analizó si los insectos se habían muerto,
+de manera que la base de datos contiene también el número de insectos muertos (`Killed`) y el número total de insectos expuestos (`Number`) por cada dosis e insecticida.
+Dado que se asume que el costo de los insecticidas es el mismo,
+el objetivo del análisis es identificar para cada insecticida qué dosis es la mínima con la que se puede indicar que el 72 % de los insectos se muere,
+así como si considerando la menor de esas tres dosis se puede afirmar que un insecticida es el mejor comparado con el resto.
+
+Notar que aquí el evento de interés es si el insecto muere o no.
+Además, dado que se tienen varios insectos para diferentes valores de dosis e insecticida,
+es posible realizar gráficas que ayudan a entender lo que se está modelando;
+de hecho la base de datos está en un formato agregado.
+
+i. Presente una gráfica de dispersión en donde en el eje `x` se incluye la dosis del insecticida y en el eje `y` la proporción de insectos muertos observados para cada combinación `dosis-insecticida`,
+distinguiendom con un color el insecticida asociado.
+Describa lo que se observa.
+
+ii. Ajuste modelos para datos binarios (ligas: `logit`, `probit`, `cloglog`) en donde incluya como covariables a `Insecticide` y `Deposit`, así como su interacción.
+Describa las expresiones del componente lineal o sistemático para cada insecticida como función de la dosis.
+Indique si alguno de los modelos parece adecuado para realizar el análisis deseado.
+
+iii. Ajuste modelos para datos binarios (ligas: `logit`, `probit`, `cloglog`) en donde adicional a las covariables incluidas en ii),
+también incluya a la interacción de `Insecticide` con `Deposit2`.
+Describa las expresiones del componente lineal o sistemático para cada insecticida como función de la dosis.
+Indique si alguno de los modelos parece adecuado para realizar el análisis deseado y argumente si tiene alguna ventaja la inclusión de los términos cuadráticos en el modelo.
+
+iv. Sólo con el modelo que considere más adecuado entre los que se ajustaron en ii) y iii)
+    
+    a. presente en la misma gráfica generada en i) los resultados de la estimación puntual para el valor esperado de la variable binaria (probabilidad de que un insecto muera).
+    
+    b. calcule la dosis mínima para cada insecticida con la que se puede indicar que el 72 % de los insectos se muere.
+    
+    c. considerando sólo la menor de las dosis encontradas en b), ¿se puede indicar que un insecticida es el mejor? Realice una prueba de hipótesis para argumentar en favor o en contra.
+    
+    d. En general ¿se puede indicar que los insecticidas A y B tienen un desempeño similar? Realice una prueba de hipótesis para argumentar en favor o en contra.
+    
+\newpage
+
+## 4. Modelos lineales generalizados para datos de conteos
+
+La base de datos _Preg4.csv_ contiene información sobre el número de casos de cáncer de pulmón (`Cases`) registrados entre 1968 y 1971
+en cuatro cuidades de Dinamarca (City).
+En estos casos se registró también la edad de los pacientes
+(`Age`, variable categorizada en 5 grupos).
+El interés del análisis es estudiar si se puede indicar que
+a mayor edad existe mayor incidencia de cáncer de pulmón.
+
+Notemos que para realizar el análisis la variable de conteos `Cases` depende de forma inherente de la población de la ciudad (`Pop`),
+pues entre más grande la ciudad es mayor el número de casos que se pueden observar;
+de manera que el estudio se debe enfocar en las tasas de incidencia.
+
+i. Presente una gráfica de dispersión en donde en el eje `x` se incluyan los grupos de edad (ordenados de menor edad a mayor) y en el eje `y` la tasa de incidencia (`Cases`/`Pop`) por cada cruce `Age-City`,
+distinguiendo con un color la Ciudad.
+Describa lo que se observa.
+
+ii. Como un primer modelo considere la distribución Poisson con liga logarítmica y las covariables `Age` y `City`, así como su interacción.
+Dado que las dos covariables son categóricas,
+este modelo con interacciones tiene muchos parámetros y es deseable trabajar con uno más simple.
+Para esto considere un segundo modelo donde sólo se usa como covariable a `Age`.
+Realice una prueba de hipótesis para argumentar si es posible considerar el segundo modelo
+[recuerde que dado que los modelos son anidados, podría
+usar la función `anova`(`mod1`, `mod2`, `test = ”Chisq”`),
+también puede usar `multcomp`, pero hay muchos parámetros y podría ser tedioso].
+Complemente su decisión con lo que se observa en la gráfica en i) y
+con medidas como **AIC** o **BIC**.
+
+iii. Considerando el modelo seleccionado en ii),
+ajuste un modelo binomial negativo.
+Compare ambos modelos e indique cuál podría ser adecuado para realizar el análisis deseado.
+Con el modelo seleccionado,
+calcule intervalos de confianza simultáneos de las tasas de incidencia para cada grupo de edad,
+incluya estos en la gráfica presentada en i).
+Comente los resultados,
+en particular si se puede indicar que a mayor edad existe mayor incidencia de cáncer de pulmón.
+
+iv. Los incisos anteriores usaron a la variable `Age` como categórica, sin embargo,
+eso dificulta un poco la interpretación,
+además de que por su naturaleza esa variable se podría haber registrado sin categorizar.
+Con los datos actuales,
+una aproximación sería usar el punto medio de cada intervalo de edad que define las categorías de `Age` y usar la `variable resultante` como una variable continua,
+llámela `Ageprima`.
+Ajuste modelos usando la distribución _Poisson_ y _Binomial Negativa_ con la covariable `Ageprima`,
+también considere la opción de incluir a `Ageprima2`.
+Entre esos 4 modelos indique cuál podría ser adecuado para realizar el análisis.
+Con ese modelo indique si a mayor edad existe mayor incidencia de cáncer de pulmón,
+por ejemplo,
+argumentando si la función es creciente considerando que el intervalo de edad que es de interés es entre 40 y 74 años.
+Presente una gráfica que complemente su análisis.
+
+\newpage
+
+## 5. Modelos lineales generalizados para datos categóricos
+
+La base de datos _Preg5.csv_ contiene información sobre el interés de aplicar a una maestría o doctorado (apply: `unlikely`, `somewhat likely`, `very likely`)
+de una muestra aleatoria de 400 estudiantes de universidad.
+El interés es identificar si entre los factores que definen este interés están:
+el tipo de universidad (public: 1 public, 0 private),
+si alguno de los padres estudió un posgrado (pared: 1 sí, 0 no)
+y el promedio actual en sus estudios universitarios (`gpa`).
+
+i. En este caso hay dos covariables que son categóricas,
+así que se puede obtener una gráfica que describa las frecuencias relativas para los tres niveles de interés de aplicación y cada cruce de las variables categóricas `public`:`pared`.
+Presente esta gráfica y comente lo que se observa.
+
+ii. También hay una variable continua,
+así que se puede obtener una gráfica (`boxplot` o `histograma`)
+que describa las distribuciones de `gpa` para los tres niveles de interés de aplicación.
+Presente esta gráfica y comente lo que se observa.
+
+iii. Ajuste un modelo logístico multinomial considerando todas las posibles interacciones entre `gpa`, `public` y `pared`. Este modelo tiene demasiados parámetros y es de interés buscar si es posible considerar un modelo más simple.
+Ajuste un modelo logístico multinomial que incluya a las tres covariables
+`gpa`, `public` y `pared`,
+pero sin considerar interacciones.
+Realice una prueba de hipótesis para argumentar si es plausible considerar el modelo más simple.
+Complemente esto con medidas como **AIC** o **BIC**.
+
+Nota computacional.
+Para los modelos ajustados en `vglm` no es posible usar directamente el paquete `multcomp`,
+pero está disponible una función `anova()` que permite comparar dos modelos,
+siempre que estos estén anidados,
+por ejemplo: `anova(mod1, mod2, test = ”LRT”, type = ”I”)`
+o equivalentemente `lrtest(mod1, mod2)`.
+
+iv. Considerando las covariables del modelo seleccionado en iii) y notando que la variable `apply` puede ser considerada como ordinal,
+ajuste un modelo logístico acumulativo (`cumulative logit`) sin considerar el supuesto de proporcionalidad.
+También ajuste un modelo que asuma el supuesto de proporcionalidad y dado que este último está anidado en el primero,
+realice una prueba de hipótesis para analizar si es plausible asumir este modelo más sencillo.
+Complemente su decisión con medidas como **AIC** o **BIC**.
+
+v. Usando el **AIC** o **BIC**, seleccione sólo un modelo entre los ajustados en iii) y iv).
+Con ese modelo,
+trate de interpretar los resultados usando pruebas de hipótesis sobre los coeficientes del modelo.
+Puede apoyarse de una gráfica, por ejemplo,
+para diferentes valores de `gpa` grafique las probabilidades de cada nivel de la variable `apply` dejando fijos los valores de las variables `pared` y `public`.
