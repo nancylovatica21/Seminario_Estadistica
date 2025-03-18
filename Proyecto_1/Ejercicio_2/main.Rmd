@@ -73,7 +73,7 @@ head(data)
 
 long_Modelo <- 3 #Longitud que tengra nuestro modelo 
 limiteInfMalla <- -2 #Lo que la malla debe de empezar a checar
-limSuperiorMalla <- 2 #Limite superior malla
+limSuperiorMalla <- 3 #Limite superior malla
 finura <- 1 #Para empezar a hacer pruebas 
 
 
@@ -86,11 +86,10 @@ finura <- 1 #Para empezar a hacer pruebas
 ```
 
 
-
-
 ```{r Algoritmo_Malla}
 #------------------------------------------------------------------------------------------------------------------------------------------
 #Algoritmo malla (Aqui hare la malla para poder elevar a las variables a la potencia que se requiera)
+
 
 
 malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2, distribucion  = c(), funcion_liga= c()){
@@ -102,8 +101,10 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
   #des_Ponderada: si se requiere usar regresion ponderada
   #limInfpon: límite inferior de la regresion ponderada
   #limSuppon: límite superior de la regresion ponderada 
+  #distribucion: distribucion que se requiere para el GLM
+  #funcion_liga: funcion liga que se requiere para el GLM
   
-
+  
   seq_values <- seq(liminf, limsup, by = finura)  #Creando las recuencias para la malla y posteriormente elevar la variable 
   df <- data.frame(matrix(ncol = 0, nrow = length(seq_values))) # Se creo el df, para poder poner las variables
 
@@ -113,8 +114,8 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
   }
   
   if(!is.null(distribucion) ){ #Agregando los GLM
-    df["GLM"] <- c(0, distribucion, rep(NA, times = length(seq_values) - (length(distribucion) + 1 )))
-    df["liga"] <- c(0, funcion_liga, rep(NA, times = length(seq_values) - (length(funcion_liga) + 1 )))
+    df["GLM"] <- c(distribucion, rep(NA, times = length(seq_values) - length(distribucion )))
+    df["liga"] <- c(funcion_liga, rep(NA, times = length(seq_values) - length(funcion_liga)))
   }
   
   if(des_Ponderada != 0){ #En caso de necesitar regresion donderada se agrega una columan con una secuencia de ponderada 
@@ -136,13 +137,11 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
 ```{r Resultados_Malla}
 
 df_malla1 <- malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
-      des_Ponderada = 0, limInfpon = 0, limSuppon = 2,  distribucion  = Distribuciones, funcion_liga= FunLigas)
+      des_Ponderada = 1, limInfpon = 0, limSuppon = 2,  distribucion  = Distribuciones, funcion_liga= FunLigas)
 
 
 
-df_malla1_clean <- df_malla1 
-
-#%>% drop_na() #Limpieando nuestro df, para que salga sin NAs
+df_malla1_clean <- df_malla1 %>% drop_na() #Limpieando nuestro df, para que salga sin NAs
 
 
 df_malla1_clean
