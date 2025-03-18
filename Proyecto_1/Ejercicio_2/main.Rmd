@@ -1,0 +1,246 @@
+---
+author: "Fernando Alvarado"
+date: "2025-03-12"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+#Empezamos limpiando nuestro ambiente
+rm(list = ls(all.names = TRUE))
+
+
+# Configuración global de los bloques de código (chunk's)
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	fig.dim = c(5.0, 4.0),
+	fig.pos = "H",
+#Agregamos configuraciones para evitar mensajes de advertencias y de errores en el archivo
+	message = FALSE,
+	warning = FALSE,
+	error = F
+)
+
+
+
+library(dplyr)      # Para el manejo de datos
+library(ggplot2)    # Para realizar gráficas
+library(kableExtra) # Para un mejor manejo de tablas
+library(purrr)      # Para la función map y map2
+
+
+# Para purebas de hipotesis
+
+
+
+
+
+#Extrayendo nuestra data
+setwd("C:/Users/ferna/Documents/Seminario_Estadistica/Proyecto_1/Ejercicio_1")
+
+data <- read.csv("./Data/Preg1A.csv")
+
+
+
+
+```
+
+
+Reporte donde seleccionaremos el mejor algoritmo de Regresion o MLG
+
+
+```{r}
+head(data)
+```
+
+
+#------------------------------------------------------------------------------------------------------------------------------------------
+#Algoritmo de selección de modelos en base a su AIC y BIC
+#------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+```{r}
+#------------------------------------------------------------------------------------------------------------------------------------------
+#Hiperparámetros de nuestro algoritmo 
+
+
+
+#Primeros parametros de nuestro algoritmo de la malla 
+
+long_Modelo <- 3 #Longitud que tengra nuestro modelo 
+limiteInfMalla <- -2 #Lo que la malla debe de empezar a checar
+limSuperiorMalla <- 2 #Limite superior malla
+finura <- 1 #Para empezar a hacer pruebas 
+
+
+```
+
+
+
+
+```{r Algoritmo_Malla}
+#------------------------------------------------------------------------------------------------------------------------------------------
+#Algoritmo malla (Aqui hare la malla para poder elevar a las variables a la potencia que se requiera)
+
+
+malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2){
+  #Parametros
+  #n: número de parametros que tiene nuestro modelo 
+  #liminf: límite inferior de la malla, para las variables x
+  #limsup: límite superior de la malla, para las variables x
+  #finura: finura de la malla que deseamos
+  #des_Ponderada: si se requiere usar regresion ponderada
+  #limInfpon: límite inferior de la regresion ponderada
+  #limSuppon: límite superior de la regresion ponderada  
+  
+
+  seq_values <- seq(liminf, limsup, by = finura)  #Creando las recuencias para la malla y posteriormente elevar la variable 
+  df <- data.frame(matrix(ncol = 0, nrow = length(seq_values))) # Se creo el df, para poder poner las variables
+
+  for (i in 1:n) {
+    col_name <- paste("var_", i, sep = "")  # Crear nombre de columna
+    df[[col_name]] <- seq_values  # Asignar los valores de la secuencia
+  }
+  if(des_Ponderada != 0){ #En caso de necesitar regresion donderada se agrega una columan con una secuencia de ponderada 
+    df[["Ponderada"]] <- seq(limInfpon, limSuppon, length.out = length(seq_values)) #Maya de regresion ponderada donde se puede cntrolar los limites de la reg ponderda, pero su finura depede de la longitud del df
+    return(expand.grid(df))
+  } else{
+    expan <- expand.grid(df)
+    expan[["Ponderada"]] <- rep(0, times = length(expan$var_1))
+     return(expan)
+  }
+
+ 
+}
+
+
+```
+
+
+```{r Resultados_Malla}
+
+df_malla1 <- malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
+      des_Ponderada = 0, limInfpon = 0, limSuppon = 2)
+
+df_malla1
+
+
+length(df_malla1$var_1)
+
+
+
+```
+
+
+
+
+```{r}
+ df <- data.frame()
+df$(paste("var_", 1)) = 1
+
+
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
