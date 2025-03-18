@@ -25,6 +25,8 @@ knitr::opts_chunk$set(
 
 
 library(dplyr)      # Para el manejo de datos
+library(tidyr)
+
 library(ggplot2)    # Para realizar gráficas
 library(kableExtra) # Para un mejor manejo de tablas
 library(purrr)      # Para la función map y map2
@@ -75,6 +77,12 @@ limSuperiorMalla <- 2 #Limite superior malla
 finura <- 1 #Para empezar a hacer pruebas 
 
 
+#Primeros GLMS
+
+(Distribuciones=c("gaussian", "Gamma", "inverse.gaussian"))
+(FunLigas=c("identity", "log", "inverse", "1/mu^2"))
+
+
 ```
 
 
@@ -85,7 +93,7 @@ finura <- 1 #Para empezar a hacer pruebas
 #Algoritmo malla (Aqui hare la malla para poder elevar a las variables a la potencia que se requiera)
 
 
-malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2){
+malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2, distribucion  = c(), funcion_liga= c()){
   #Parametros
   #n: número de parametros que tiene nuestro modelo 
   #liminf: límite inferior de la malla, para las variables x
@@ -93,7 +101,7 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
   #finura: finura de la malla que deseamos
   #des_Ponderada: si se requiere usar regresion ponderada
   #limInfpon: límite inferior de la regresion ponderada
-  #limSuppon: límite superior de la regresion ponderada  
+  #limSuppon: límite superior de la regresion ponderada 
   
 
   seq_values <- seq(liminf, limsup, by = finura)  #Creando las recuencias para la malla y posteriormente elevar la variable 
@@ -103,13 +111,19 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
     col_name <- paste("var_", i, sep = "")  # Crear nombre de columna
     df[[col_name]] <- seq_values  # Asignar los valores de la secuencia
   }
+  
+  if(!is.null(distribucion) ){ #Agregando los GLM
+    df["GLM"] <- c(0, distribucion, rep(NA, times = length(seq_values) - (length(distribucion) + 1 )))
+    df["liga"] <- c(0, funcion_liga, rep(NA, times = length(seq_values) - (length(funcion_liga) + 1 )))
+  }
+  
   if(des_Ponderada != 0){ #En caso de necesitar regresion donderada se agrega una columan con una secuencia de ponderada 
     df[["Ponderada"]] <- seq(limInfpon, limSuppon, length.out = length(seq_values)) #Maya de regresion ponderada donde se puede cntrolar los limites de la reg ponderda, pero su finura depede de la longitud del df
     return(expand.grid(df))
   } else{
     expan <- expand.grid(df)
     expan[["Ponderada"]] <- rep(0, times = length(expan$var_1))
-     return(expan)
+    return(expan)
   }
 
  
@@ -122,25 +136,38 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
 ```{r Resultados_Malla}
 
 df_malla1 <- malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
-      des_Ponderada = 0, limInfpon = 0, limSuppon = 2)
-
-df_malla1
+      des_Ponderada = 0, limInfpon = 0, limSuppon = 2,  distribucion  = Distribuciones, funcion_liga= FunLigas)
 
 
-length(df_malla1$var_1)
+
+df_malla1_clean <- df_malla1 
+
+#%>% drop_na() #Limpieando nuestro df, para que salga sin NAs
+
+
+df_malla1_clean
+
+
+
+length(df_malla1_clean$var_1)
+
+
 
 
 
 ```
 
 
-
+### Prueba de mi malla 
 
 ```{r}
- df <- data.frame()
-df$(paste("var_", 1)) = 1
 
+df_malla2 <- malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
+      des_Ponderada = 0, limInfpon = 0, limSuppon = 2,  distribucion  = c(), funcion_liga= c())
 
+df_malla2
+
+length(df_malla2$var_1)
 
 ```
 
