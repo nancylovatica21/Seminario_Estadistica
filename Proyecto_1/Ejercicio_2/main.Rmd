@@ -71,10 +71,10 @@ head(data)
 
 #Primeros parametros de nuestro algoritmo de la malla 
 
-long_Modelo <- 3 #Longitud que tengra nuestro modelo 
-limiteInfMalla <- -2 #Lo que la malla debe de empezar a checar
-limSuperiorMalla <- 3 #Limite superior malla
-finura <- 1 #Para empezar a hacer pruebas 
+long_Modelo <- 2 #Longitud que tengra nuestro modelo 
+limiteInfMalla <- -1 #Lo que la malla debe de empezar a checar
+limSuperiorMalla <- 5 #Limite superior malla
+finura <- .5 #Para empezar a hacer pruebas 
 
 
 #Primeros GLMS
@@ -92,7 +92,7 @@ finura <- 1 #Para empezar a hacer pruebas
 
 
 
-malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2, distribucion  = c(), funcion_liga= c()){
+malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2, distribucion  = c(), funcion_liga= c(), numPesos){
   #Parametros
   #n: número de parametros que tiene nuestro modelo 
   #liminf: límite inferior de la malla, para las variables x
@@ -103,27 +103,32 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
   #limSuppon: límite superior de la regresion ponderada 
   #distribucion: distribucion que se requiere para el GLM
   #funcion_liga: funcion liga que se requiere para el GLM
+  #numPesos: Parametro que nos dice cuantos direntes pesos tendremos que considerar a la hora de hacer regresion ponderada
   
   
   seq_values <- seq(liminf, limsup, by = finura)  #Creando las recuencias para la malla y posteriormente elevar la variable 
   df <- data.frame(matrix(ncol = 0, nrow = length(seq_values))) # Se creo el df, para poder poner las variables
+
 
   for (i in 1:n) {
     col_name <- paste("var_", i, sep = "")  # Crear nombre de columna
     df[[col_name]] <- seq_values  # Asignar los valores de la secuencia
   }
   
+  df["Num_Ponderada"] <- c(1:numPesos,  rep(NA, times = length(seq_values) - numPesos))  #Definiendo las combinaciones de nuestro modelo de regresion ponderada
+  
   if(!is.null(distribucion) ){ #Agregando los GLM
-    df["GLM"] <- c(distribucion, rep(NA, times = length(seq_values) - length(distribucion )))
+    df["GLM"] <- c(0, distribucion, rep(NA, times = length(seq_values) - length(distribucion)-1))
     df["liga"] <- c(funcion_liga, rep(NA, times = length(seq_values) - length(funcion_liga)))
   }
   
-  if(des_Ponderada != 0){ #En caso de necesitar regresion donderada se agrega una columan con una secuencia de ponderada 
-    df[["Ponderada"]] <- seq(limInfpon, limSuppon, length.out = length(seq_values)) #Maya de regresion ponderada donde se puede cntrolar los limites de la reg ponderda, pero su finura depede de la longitud del df
+  if(des_Ponderada == 1){ #En caso de necesitar regresion donderada se agrega una columan con una secuencia de ponderada 
+    #Maya de regresion ponderada donde se puede cntrolar los limites de la reg ponderda, pero su finura depede de la longitud del df
+    df[["Ponderada_1"]] <- seq(limInfpon, limSuppon, length.out = length(seq_values)) 
     return(expand.grid(df))
   } else{
     expan <- expand.grid(df)
-    expan[["Ponderada"]] <- rep(0, times = length(expan$var_1))
+    expan[["Ponderada_1"]] <- rep(0, times = length(expan$var_1))
     return(expan)
   }
 
@@ -136,65 +141,139 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
 
 ```{r Resultados_Malla}
 
-df_malla1 <- malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
-      des_Ponderada = 1, limInfpon = 0, limSuppon = 2,  distribucion  = Distribuciones, funcion_liga= FunLigas)
+
+limpieza_mallaa <- function(dfMalla){
+  #Funcion para limpiar nuestra malla, ya que viene con varios NA y con filas repetidas
+    clean <- dfMalla %>%
+    drop_na() %>%  # Elimina filas con NA en cualquier columna
+    distinct()     # Elimina filas duplicadas
+    return( clean)
+}
+#Sin Na tengo 35,152
+
+malla <- limpieza_mallaa(malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
+                                 des_Ponderada = 1, limInfpon = 0, limSuppon = 2,  distribucion  = Distribuciones, funcion_liga= FunLigas, 2))
 
 
+malla
 
-df_malla1_clean <- df_malla1 %>% drop_na() #Limpieando nuestro df, para que salga sin NAs
-
-
-df_malla1_clean
-
-
-
-length(df_malla1_clean$var_1)
-
-
-
-
-
+print(length(malla$var_1))
 ```
 
-
-### Prueba de mi malla 
-
 ```{r}
+typeof(malla$Ponderada_1)
 
-df_malla2 <- malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
-      des_Ponderada = 0, limInfpon = 0, limSuppon = 2,  distribucion  = c(), funcion_liga= c())
+typeof(malla$liga)
 
-df_malla2
-
-length(df_malla2$var_1)
 
 ```
 
 
 
 
+
+```{r ProcesacmientO_modelos}
+#Aplicando las combinaciones de la malla a nuestro modelo
+
+AIC_Models <- apply(malla, 1, function(df){
+    num <- as.numeric(c(df[1],df[2],df[3],df[6])) #Pasando a numero los, string que vienen en la malla
+    str<- as.character(c(df[4], df[5])) #Pasando a caracter nuestro df, para no tener problemas de tipo en R
+    
+    
+    if(str[1] == "0" && num[4] == 0 ){ #Condicionla para checar que no consideramos ni regresion ponderada ni GLM
+        AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , data = data))
+    }else if(str[1] == "0"){
+      if(num[3] == 1){
+        AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , weights = 1 / I(bmi^num[4]), data = data)) #Pondera en base a BMI
+      } else{
+        AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , weights = 1 / I(age^num[4]), data = data)) #Pondera en base a age
+      }
+    }else{ #Ahora si aplicamos los modelos GLMs
+       fam_selec <- get(str[1]) #Seleccionamios la funcion que viene en la palabra  
+       AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , data = data, family = fam_selec(link = str[2])))
+    }
+  
+})
+
+#df[1]    var 2
+#df[2]    var 1
+#df[3]    Numero de modelo ponderados
+#df[6]    Poderada
+
+
+
+```
+
+
+```{r Resultados}
+Resultado_Modelos <- data.frame(malla, AIC = unlist(AIC_Models))
+Resultado_Modelos
+
+```
+
+
+
+```{r Seleccion_Modelos}
+n <- 30 # Cambia según lo que necesites
+
+# Ordenar los valores de AIC y seleccionar los n más pequeños
+indices_minimos <- order(Resultado_Modelos$AIC)[1:n]
+
+# Crear un data frame con los n valores mínimos de AIC y sus respectivos parámetros
+df_minimos <- Resultado_Modelos[indices_minimos, ]
+
+
+df_minimos
+
+```
+
+
+
 ```{r}
+#Comprobacion Aic
+
+ AIC(lm(bpsystol ~  I(bmi^1.5) + I(age^4) + sex , weights = 1 / I(age^0.6666667), data = data)) #Pondera en base a BMI
+
 
 ```
 
 
 
 
-```{r}
+# Preubas 
 
+
+```{r}
+data(mtcars)
+
+# Ajustar el modelo con interacción
+modelo_interaccion <- lm(mpg ~ wt * hp, data = mtcars)
+
+# Mostrar el resumen del modelo
+summary(modelo_interaccion)
+
+
+names(modelo_interaccion$coefficients)[2]   #Obteniendo el nombre del primer coeficiente 
+
+
+
+ modelo <- function(modelado, vector_modela, data){
+   mod <- lm(modelado )
+   
+ }
 ```
 
 
 
 
 ```{r}
+char_vector <- c("10", "20", "30")
+num_vector <- as.numeric(char_vector)
+print(num_vector)
 
-```
 
 
-
-
-```{r}
+num_vector[1] * num_vector[1] 
 
 ```
 
