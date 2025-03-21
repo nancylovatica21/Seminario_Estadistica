@@ -163,11 +163,6 @@ malla <- limpieza_mallaa(mallaAl(long_Modelo, limiteInfMalla, limSuperiorMalla, 
 
 
 
-
-
-
-
-
 ```{r Filtrando_modelos}
 regresion <- malla %>% 
   filter(malla$GLM == "0" & malla$Ponderada == 0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
@@ -214,17 +209,13 @@ num_modelos_GLM <- length(modelos_GLM$var_1)
 
 total <- num_modelos_GLM + num_regresion_Ponderada + num_regresion
 
-total
-
-
-print(length(malla$var_1))
 
 ```
 
 
-### Eplicaciones Modelo 
+## Explicacion de  Algoritmo 
 
-En el algoritmo empleado,  definimos una funcion que hacia una **Malla** (con todos los valores y  combinaciones posibles), para  **var_1 ** y  **var_2 **, se creeo a partir de una secuancia de [0,5] con 0.3 de incremento, luego se hizo la columna  **Num_Ponderada **, en ella se difinia que variable iba a tomar el peso en nuestra regresion poderada, donde el peso se definia en la columna **Ponderada**, para los modelos generales lineales, se emplearon las columnas  **Num_Ponderada ** y  **GLM **, donde el total de combinaciones fueron: `R length(malla$var_1) `
+En el algoritmo empleado,  definimos una funcion que hacia una **Malla** (con todos los valores y  combinaciones posibles), para  **var_1 ** y  **var_2 **, se creeo a partir de una secuancia de [0,5] con 0.3 de incremento, luego se hizo la columna  **Num_Ponderada **, en ella se difinia que variable iba a tomar el peso en nuestra regresion poderada, donde el peso se definia en la columna **Ponderada**, para los modelos generales lineales, se emplearon las columnas  **Num_Ponderada ** y  **GLM **.
 
 
 
@@ -234,6 +225,23 @@ head(malla) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = FALSE, position = "center")
 ```
+
+Ejemplo de como se veia el data frame **malla**, con los 10 primero elementos, este data frame contenia: `R length(malla$var_1) ` combinaciones. 
+
+
+Posteriormente se realizo un filtrado a nuestra **malla**, pasar saber que tipo de modelo ibamos a evaluar con cada fila, este proceso ayudo a reducir el numero de modelo a evaluar, ya que quitaba elemento repetido de nuestra **malla**, los criterios para esta eleccion, fueron:
+
+- Si las columnas **GLM** y **Ponderada** eran iguales a 0, entonces se aplicaba in modelo de regresion multiple. Donde E[bpsystol] =  bmi^**var_1** +  age^**var_2** + sex
+
+- Si la columna **Ponderada** era igual a 0, entonces aplicabamos regresion ponderada, donde con **Num:ponderada** elegiamos a que variable **bmi** o **age**, le ibamos a asignar el peso
+
++ Si **Num_Ponderada** era igual a 1, entonces  E[bpsystol] =  bmi^**var_1** +  age^**var_2** + sex, weights = 1/ bmi ^ **Ponderada**, en caso contrario E[bpsystol] =  bmi^**var_1** +  age^**var_2** + sex, weights = 1/ age ^ **Ponderada**
+
+
+- Como ultimo caso, si **GLM** era distinto de 0, aplicabamos un modelo GLM, donde liga( E[bpsystol] ) =  bmi^**var_1** +  age^**var_2** + sex
+
+
+Con todo esto, evaluamos un total de `R total` modelos de los cuales,  evaluamos  `R  num_regresion ` modelos de regresion multiple,    `R num_regresion_Ponderada` modelos de regresion ponderada,    `R  num_modelos_GLM ` modelos GLM.    
 
 
 ```{r Procesamiento_datos}
@@ -272,13 +280,15 @@ AIC_modelos_GLM <- data.frame(modelos_GLM, AIC= unlist(evaluando_modelos_GLM))
 ```
 
 
+
+
+
 ```{r Uniendo_DF}
 
 
 # Uniendo los dataframes como una pila
 AIC_Models <- bind_rows(AIC_regresion, AIC_regresion_Ponderada, AIC_modelos_GLM )
 
-AIC_Models
 
 ```
 
@@ -288,7 +298,7 @@ AIC_Models
 
 
 ```{r Seleccion_Modelos}
-n <- 10 # Cambia según lo que necesites
+n <- 10 # Numero de modelos que queremos
 
 # Ordenar los valores de AIC y seleccionar los n más pequeños
 indices_minimos <- order(AIC_Models$AIC)[1:n]
@@ -297,7 +307,10 @@ indices_minimos <- order(AIC_Models$AIC)[1:n]
 df_minimos <- AIC_Models[indices_minimos, ]
 
 
-df_minimos
+head(df_minimos) %>%
+  kable(format = "html", caption = "Top 10 mejores modelos") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = FALSE, position = "center")
 
 ```
 
