@@ -49,7 +49,17 @@ data <- read.csv("./Data/Preg1A.csv")
 ```
 
 
-Reporte donde seleccionaremos el mejor algoritmo de Regresion o MLG
+# Exploracion de modelos
+
+En este proyecto se ralizo un algoritmo para encontrar el mejor modelo que modele nuestros datos, se uso regresion multiple, regresion ponderada y modelos generales lineales (normal, gamma, inversa gaussiana), donde cada variable estaba elevada a una potencia. Posterirormente cada modelo fue evaluado usando la metrica AIC y se ordeno de de menor a mayor AIC, para ver cual era el de minimo AIC y evaluar si pasaba los supuestos.
+
+
+La base de datos que se manejo en este proyecto contiene información sobre 438 pacientes seleccionados de forma aleatoria, donde con nuestro modelo seleccionado  queremos analizar si existe una asociacion entre la presión arterial sistólica (bpsystol) y el índice de masa corporal (bmi), en particular, si es posible observar que tener un índice de masa corporal alto se asocia con una alta presión arterial sistólica.
+
+
+
+
+
 
 
 ```{r}
@@ -79,7 +89,7 @@ finura <- .3 #Para empezar a hacer pruebas
 
 #Primeros GLMS
 
-(Distribuciones=c("gaussian", "Gamma", "inverse.gaussian"))
+(Distribuciones=c("gaussian", "Gamma", "inverse.gaussian", ))
 (FunLigas=c("identity", "log", "inverse", "1/mu^2"))
 
 
