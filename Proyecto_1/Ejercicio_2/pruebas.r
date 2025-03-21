@@ -52,3 +52,9 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
 
  
 }
+
+
+
+
+
+length()

@@ -29,6 +29,7 @@ library(tidyr)
 
 library(ggplot2)    # Para realizar gráficas
 library(kableExtra) # Para un mejor manejo de tablas
+library(knitr)
 library(purrr)      # Para la función map y map2
 
 
@@ -60,19 +61,6 @@ La base de datos que se manejo en este proyecto contiene información sobre 438 
 
 
 
-
-
-```{r}
-head(data)
-```
-
-
-#------------------------------------------------------------------------------------------------------------------------------------------
-#Algoritmo de selección de modelos en base a su AIC y BIC
-#------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
 ```{r}
 #------------------------------------------------------------------------------------------------------------------------------------------
 #Hiperparámetros de nuestro algoritmo 
@@ -89,7 +77,7 @@ finura <- .3 #Para empezar a hacer pruebas
 
 #Primeros GLMS
 
-(Distribuciones=c("gaussian", "Gamma", "inverse.gaussian", ))
+(Distribuciones=c("gaussian", "Gamma", "inverse.gaussian" ))
 (FunLigas=c("identity", "log", "inverse", "1/mu^2"))
 
 
@@ -102,7 +90,7 @@ finura <- .3 #Para empezar a hacer pruebas
 
 
 
-malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2, distribucion  = c(), funcion_liga= c(), numPesos){
+mallaAl <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, limSuppon = 2, distribucion  = c(), funcion_liga= c(), numPesos){
   #Parametros
   #n: número de parametros que tiene nuestro modelo 
   #liminf: límite inferior de la malla, para las variables x
@@ -161,14 +149,22 @@ limpieza_mallaa <- function(dfMalla){
 }
 #Sin Na tengo 35,152
 
-malla <- limpieza_mallaa(malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
+malla <- limpieza_mallaa(mallaAl(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
                                  des_Ponderada = 1, limInfpon = 0, limSuppon = 2.5,  distribucion  = Distribuciones, funcion_liga= FunLigas, 2))
 
 
-malla
 
-print(length(malla$var_1))
+
+
+
+
+
 ```
+
+
+
+
+
 
 
 
@@ -214,17 +210,30 @@ num_modelos_GLM <- length(modelos_GLM$var_1)
 
 
 
-### Numero de modelos
-
 ```{r Total_Modelos}
 
 total <- num_modelos_GLM + num_regresion_Ponderada + num_regresion
 
 total
 
+
+print(length(malla$var_1))
+
 ```
 
 
+### Eplicaciones Modelo 
+
+En el algoritmo empleado,  definimos una funcion que hacia una **Malla** (con todos los valores y  combinaciones posibles), para  **var_1 ** y  **var_2 **, se creeo a partir de una secuancia de [0,5] con 0.3 de incremento, luego se hizo la columna  **Num_Ponderada **, en ella se difinia que variable iba a tomar el peso en nuestra regresion poderada, donde el peso se definia en la columna **Ponderada**, para los modelos generales lineales, se emplearon las columnas  **Num_Ponderada ** y  **GLM **, donde el total de combinaciones fueron: `R length(malla$var_1) `
+
+
+
+```{r}
+head(malla) %>%
+  kable(format = "html", caption = "Primeros datos") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = FALSE, position = "center")
+```
 
 
 ```{r Procesamiento_datos}
