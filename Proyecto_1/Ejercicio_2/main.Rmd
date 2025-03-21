@@ -38,7 +38,7 @@ library(purrr)      # Para la función map y map2
 
 
 
-#Extrayendo nuestra data
+#Extrayendo nuestra datas
 setwd("C:/Users/ferna/Documents/Seminario_Estadistica/Proyecto_1/Ejercicio_1")
 
 data <- read.csv("./Data/Preg1A.csv")
@@ -72,9 +72,9 @@ head(data)
 #Primeros parametros de nuestro algoritmo de la malla 
 
 long_Modelo <- 2 #Longitud que tengra nuestro modelo 
-limiteInfMalla <- -1 #Lo que la malla debe de empezar a checar
+limiteInfMalla <- 0 #Lo que la malla debe de empezar a checar
 limSuperiorMalla <- 5 #Limite superior malla
-finura <- .5 #Para empezar a hacer pruebas 
+finura <- .3 #Para empezar a hacer pruebas 
 
 
 #Primeros GLMS
@@ -124,11 +124,11 @@ malla <- function(n, liminf, limsup, finura, des_Ponderada = 0 , limInfpon = 0, 
   
   if(des_Ponderada == 1){ #En caso de necesitar regresion donderada se agrega una columan con una secuencia de ponderada 
     #Maya de regresion ponderada donde se puede cntrolar los limites de la reg ponderda, pero su finura depede de la longitud del df
-    df[["Ponderada_1"]] <- seq(limInfpon, limSuppon, length.out = length(seq_values)) 
+    df[["Ponderada"]] <- seq(limInfpon, limSuppon, length.out = length(seq_values)) 
     return(expand.grid(df))
   } else{
     expan <- expand.grid(df)
-    expan[["Ponderada_1"]] <- rep(0, times = length(expan$var_1))
+    expan[["Ponderada"]] <- rep(0, times = length(expan$var_1))
     return(expan)
   }
 
@@ -152,7 +152,7 @@ limpieza_mallaa <- function(dfMalla){
 #Sin Na tengo 35,152
 
 malla <- limpieza_mallaa(malla(long_Modelo, limiteInfMalla, limSuperiorMalla, finura, 
-                                 des_Ponderada = 1, limInfpon = 0, limSuppon = 2,  distribucion  = Distribuciones, funcion_liga= FunLigas, 2))
+                                 des_Ponderada = 1, limInfpon = 0, limSuppon = 2.5,  distribucion  = Distribuciones, funcion_liga= FunLigas, 2))
 
 
 malla
@@ -160,10 +160,43 @@ malla
 print(length(malla$var_1))
 ```
 
-```{r}
-typeof(malla$Ponderada_1)
 
-typeof(malla$liga)
+
+```{r Filtrando_modelos}
+regresion <- malla %>% 
+  filter(malla$GLM == "0" & malla$Ponderada == 0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
+  select(var_1, var_2)%>%  # Elimina filas con NA en cualquier columna
+    distinct() 
+
+
+#regresion
+
+num_regresion <- length(regresion$var_1)
+
+#Veamos el numero de regresiones normales
+#num_regresion
+
+
+
+regresion_Ponderada <- malla %>%
+  filter( malla$Ponderada !=0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
+  select(var_1, var_2, Num_Ponderada, Ponderada)%>%  # Elimina filas con NA en cualquier columna
+    distinct() 
+
+
+num_regresion_Ponderada <- length(regresion_Ponderada$var_1)
+
+#num_regresion_Ponderada
+
+
+modelos_GLM  <- malla %>%
+  filter(malla$GLM != "0") %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
+  select(var_1, var_2, GLM, liga)%>%  # Elimina filas con NA en cualquier columna
+    distinct() 
+
+
+num_modelos_GLM <- length(modelos_GLM$var_1)
+
 
 
 ```
@@ -171,56 +204,78 @@ typeof(malla$liga)
 
 
 
+### Numero de modelos
 
-```{r ProcesacmientO_modelos}
-#Aplicando las combinaciones de la malla a nuestro modelo
+```{r Total_Modelos}
 
-AIC_Models <- apply(malla, 1, function(df){
-    num <- as.numeric(c(df[1],df[2],df[3],df[6])) #Pasando a numero los, string que vienen en la malla
-    str<- as.character(c(df[4], df[5])) #Pasando a caracter nuestro df, para no tener problemas de tipo en R
-    
-    
-    if(str[1] == "0" && num[4] == 0 ){ #Condicionla para checar que no consideramos ni regresion ponderada ni GLM
-        AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , data = data))
-    }else if(str[1] == "0"){
-      if(num[3] == 1){
-        AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , weights = 1 / I(bmi^num[4]), data = data)) #Pondera en base a BMI
+total <- num_modelos_GLM + num_regresion_Ponderada + num_regresion
+
+total
+
+```
+
+
+
+
+```{r Procesamiento_datos}
+
+# Evaluando los modelos de regresion multivariada
+evaluando_regresion <- apply(regresion, 1 ,function(df){
+    AIC(lm(bpsystol ~  I(bmi^df[1]) + I(age^df[2]) + sex , data = data))
+})
+
+
+AIC_regresion <- data.frame(regresion, AIC = unlist(evaluando_regresion))
+
+
+#Evaluando los modelos de regrecion multivarada ponderada
+evaluando_regresion_Ponderada <- apply(regresion_Ponderada, 1, function(df){
+   if(df[3] == 1){
+        AIC(lm(bpsystol ~  I(bmi^df[1]) + I(age^df[2]) + sex , weights = 1 / I(bmi^df[4]), data = data)) #Pondera en base a BMI
       } else{
-        AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , weights = 1 / I(age^num[4]), data = data)) #Pondera en base a age
+        AIC(lm(bpsystol ~  I(bmi^df[1]) + I(age^df[2]) + sex , weights = 1 / I(age^df[4]), data = data)) #Pondera en base a age
       }
-    }else{ #Ahora si aplicamos los modelos GLMs
-       fam_selec <- get(str[1]) #Seleccionamios la funcion que viene en la palabra  
-       AIC(lm(bpsystol ~  I(bmi^num[1]) + I(age^num[2]) + sex , data = data, family = fam_selec(link = str[2])))
-    }
+})
+
+AIC_regresion_Ponderada <- data.frame(regresion_Ponderada, AIC = unlist(evaluando_regresion_Ponderada))
+
+
+
+#Evaluando los modelos GLMs
+evaluando_modelos_GLM <- apply(modelos_GLM, 1, function(df){
+   fam_selec <- get(as.character(df[3])) #Seleccionamios la funcion que viene en la palabra  
+   AIC(glm(bpsystol ~  I(bmi^as.numeric(df[1])) + I(age^as.numeric(df[2])) + sex , data = data, family = fam_selec(link =df[4])))
   
 })
 
-#df[1]    var 2
-#df[2]    var 1
-#df[3]    Numero de modelo ponderados
-#df[6]    Poderada
-
-
+AIC_modelos_GLM <- data.frame(modelos_GLM, AIC= unlist(evaluando_modelos_GLM))
 
 ```
 
 
-```{r Resultados}
-Resultado_Modelos <- data.frame(malla, AIC = unlist(AIC_Models))
-Resultado_Modelos
+```{r Uniendo_DF}
+
+
+# Uniendo los dataframes como una pila
+AIC_Models <- bind_rows(AIC_regresion, AIC_regresion_Ponderada, AIC_modelos_GLM )
+
+AIC_Models
 
 ```
+
+
+
 
 
 
 ```{r Seleccion_Modelos}
-n <- 30 # Cambia según lo que necesites
+n <- 10 # Cambia según lo que necesites
 
 # Ordenar los valores de AIC y seleccionar los n más pequeños
-indices_minimos <- order(Resultado_Modelos$AIC)[1:n]
+indices_minimos <- order(AIC_Models$AIC)[1:n]
 
 # Crear un data frame con los n valores mínimos de AIC y sus respectivos parámetros
-df_minimos <- Resultado_Modelos[indices_minimos, ]
+df_minimos <- AIC_Models[indices_minimos, ]
 
 
 df_minimos
@@ -239,43 +294,6 @@ df_minimos
 
 
 
-
-# Preubas 
-
-
-```{r}
-data(mtcars)
-
-# Ajustar el modelo con interacción
-modelo_interaccion <- lm(mpg ~ wt * hp, data = mtcars)
-
-# Mostrar el resumen del modelo
-summary(modelo_interaccion)
-
-
-names(modelo_interaccion$coefficients)[2]   #Obteniendo el nombre del primer coeficiente 
-
-
-
- modelo <- function(modelado, vector_modela, data){
-   mod <- lm(modelado )
-   
- }
-```
-
-
-
-
-```{r}
-char_vector <- c("10", "20", "30")
-num_vector <- as.numeric(char_vector)
-print(num_vector)
-
-
-
-num_vector[1] * num_vector[1] 
-
-```
 
 
 
