@@ -35,7 +35,12 @@ library(purrr)      # Para la función map y map2
 
 # Para purebas de hipotesis
 
-
+library(multcomp)   # Para pruebas de hipótesis
+library(car)        # Para funciones útiles de modelos de regresión lineal múltiple
+library(broom)      # Para obtener los residuales estandarizados
+library(purrr)      # Para la función map y map2
+library(lmtest )    #Checar homoceasticidad
+library(nortest )
 
 
 
@@ -77,8 +82,8 @@ finura <- .3 #Para empezar a hacer pruebas
 
 #Primeros GLMS
 
-(Distribuciones=c("gaussian", "Gamma", "inverse.gaussian" ))
-(FunLigas=c("identity", "log", "inverse", "1/mu^2"))
+Distribuciones=c("gaussian", "Gamma", "inverse.gaussian" )
+FunLigas=c("identity", "log", "inverse", "1/mu^2")
 
 
 ```
@@ -153,20 +158,16 @@ malla <- limpieza_mallaa(mallaAl(long_Modelo, limiteInfMalla, limSuperiorMalla, 
                                  des_Ponderada = 1, limInfpon = 0, limSuppon = 2.5,  distribucion  = Distribuciones, funcion_liga= FunLigas, 2))
 
 
-
-
-
-
-
-
 ```
+
+
 
 
 
 ```{r Filtrando_modelos}
 regresion <- malla %>% 
-  filter(malla$GLM == "0" & malla$Ponderada == 0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
-  select(var_1, var_2)%>%  # Elimina filas con NA en cualquier columna
+  dplyr::filter(malla$GLM == "0" & malla$Ponderada == 0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
+  dplyr::select(var_1, var_2)%>%  # Elimina filas con NA en cualquier columna
     distinct() 
 
 
@@ -180,8 +181,8 @@ num_regresion <- length(regresion$var_1)
 
 
 regresion_Ponderada <- malla %>%
-  filter( malla$Ponderada !=0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
-  select(var_1, var_2, Num_Ponderada, Ponderada)%>%  # Elimina filas con NA en cualquier columna
+  dplyr::filter( malla$Ponderada !=0) %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
+  dplyr::select(var_1, var_2, Num_Ponderada, Ponderada)%>%  # Elimina filas con NA en cualquier columna
     distinct() 
 
 
@@ -191,8 +192,8 @@ num_regresion_Ponderada <- length(regresion_Ponderada$var_1)
 
 
 modelos_GLM  <- malla %>%
-  filter(malla$GLM != "0") %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
-  select(var_1, var_2, GLM, liga)%>%  # Elimina filas con NA en cualquier columna
+  dplyr::filter(malla$GLM != "0") %>% #Aplicamos el filtro para solo seleccionar las que seran para la regresion normal
+  dplyr::select(var_1, var_2, GLM, liga)%>%  # Elimina filas con NA en cualquier columna
     distinct() 
 
 
@@ -226,7 +227,7 @@ head(malla) %>%
                 full_width = FALSE, position = "center")
 ```
 
-Ejemplo de como se veia el data frame **malla**, con los 10 primero elementos, este data frame contenia: `R length(malla$var_1) ` combinaciones. 
+Ejemplo de como se veia el data frame **malla**, con los 10 primero elementos, este data frame contenia: `r  length(malla$var_1) ` combinaciones. 
 
 
 Posteriormente se realizo un filtrado a nuestra **malla**, pasar saber que tipo de modelo ibamos a evaluar con cada fila, este proceso ayudo a reducir el numero de modelo a evaluar, ya que quitaba elemento repetido de nuestra **malla**, los criterios para esta eleccion, fueron:
@@ -241,7 +242,7 @@ Posteriormente se realizo un filtrado a nuestra **malla**, pasar saber que tipo 
 - Como ultimo caso, si **GLM** era distinto de 0, aplicabamos un modelo GLM, donde liga( E[bpsystol] ) =  bmi^**var_1** +  age^**var_2** + sex
 
 
-Con todo esto, evaluamos un total de `R total` modelos de los cuales,  evaluamos  `R  num_regresion ` modelos de regresion multiple,    `R num_regresion_Ponderada` modelos de regresion ponderada,    `R  num_modelos_GLM ` modelos GLM.    
+Con todo esto, evaluamos un total de `r print(total)` modelos de los cuales,  evaluamos  `r   num_regresion ` modelos de regresion multiple,    `r  num_regresion_Ponderada` modelos de regresion ponderada,    `r   num_modelos_GLM ` modelos GLM.    
 
 
 ```{r Procesamiento_datos}
@@ -295,8 +296,6 @@ AIC_Models <- bind_rows(AIC_regresion, AIC_regresion_Ponderada, AIC_modelos_GLM 
 
 
 
-
-
 ```{r Seleccion_Modelos}
 n <- 10 # Numero de modelos que queremos
 
@@ -319,40 +318,52 @@ head(df_minimos) %>%
 ```{r}
 #Comprobacion Aic
 
- AIC(lm(bpsystol ~  I(bmi^1.5) + I(age^4) + sex , weights = 1 / I(age^0.6666667), data = data)) #Pondera en base a BMI
-
-
-```
-
-
-
-
-
-
-```{r}
+modelo <- glm(bpsystol ~  I(bmi^1.2) + I(age^4.2) + sex , data = data, family = Gamma(link = "identity"))
 
 ```
 
 
+### Modelo Seleccionado:
+
+Es un modelo GLM, gamma con funcion liga identidad, el cual obtuvo un AIC de: `r  AIC(modelo) `, donde:
 
 
-```{r}
+**E[Y| bmi + age + sex] = b0 + b1 (x_1)^1.2 + b2 (x_2)^4.2 + b3 (x_1)**. 
 
+
+
+```{r Verificacion_supuestos}
+
+#Prueba de linealidad
+linealidad <- residualPlots(modelo, test = FALSE, plot = FALSE) #Test H0 = La relacion entre el predictor y la respuesta e lina vs HA: La relacion no es lineal
+homoceasticidad<- lmtest::bptest(modelo)  #Ho, la variaza de los errores es contante va HA, la varianza no es contante
+normalidad <- ad.test(residuals(modelo))  # Ho el modelo es normal 
+corResiduos <- bgtest(modelo)
 ```
 
+#### Verificacion de supuestos 
+
+
+Haciendo la verificacion de supuestos mediante pruebas de hipoteises, concluios que: 
+
++ Nuestro modelo cumple linealidad en las 3 variables,  gracias al test Ramsey de la libreria Car, con un p-value de `r  as.numeric((linealidad[, "Pr(>|Test stat|)"])[1])` verificamos la liealad de bmi, con un p-value `r  as.numeric((linealidad[, "Pr(>|Test stat|)"])[2])` verificamos la de age  y  con un un p-value `r  as.numeric((linealidad[, "Pr(>|Test stat|)"])[2])` la de sex
+
+
++ Tambien nuestro modelo cumple homoceasticidad, ya que con un p-value de: `r homoceasticidad$p.value`, concluimo que no eixiste evidencia suficiente para rechar homoceasticidad
+
++ Ademas, gracias al tamaño de nuestra muestra y a la prueba de hipotesis  Anderson-Darling, con un p-value `r normalidad$p.value`, podemos concluir que nuestros datos se distribuyen de forma normal (Por el tamaño de la prueba y la prueba de hipotesis)
+
++ Por ultimo gracias a la prueba Breusch-Godfrey con un p-value de `r corResiduos$p.value`, podemos concluir que no hay evidencia que niege la no autocorrelacion de nuestros datos.
+
+
+Por lo que nuestro modelo cumple todos los supuestos.
 
 
 
-```{r}
-
-```
 
 
 
 
-```{r}
-
-```
 
 
 
