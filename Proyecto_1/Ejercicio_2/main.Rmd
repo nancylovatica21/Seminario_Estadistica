@@ -501,4 +501,29 @@ Este efecto no es invariante con respecto a la edad ni al sexo: aunque la tenden
 
 
 
+```{r AIC_eje1}
+modelo_eje1 <- lm(log(bpsystol) ~ log(bmi) + sex + I(age^3), data = data)
+
+
+eje1AIC <- AIC(modelo_eje1)
+
+selectAIC <- AIC(modelo)
+
+```
+
+
+
+## Conclusión
+
+En el modelo usado en el **Ejercicio 1**, se planteó lo siguiente:
+
+$$
+\mathbb{E}[\ln(\text{bpsystol}) \mid \text{bmi},\ \text{age},\ \text{sex}] = \beta_0 + \beta_1 \ln(\text{bmi}) + \beta_2 (\text{age})^3 + \beta_3 (\text{sex})
+$$
+
+Donde su AIC fue de `r eje1AIC`, mientras que el GLM que elegimos obtuvo un AIC de: `r selectAIC`. Estos AIC no son comparables directamente, ya que se basan en verosimilitudes distintas. Sin embargo, ambos modelos cumplen con los supuestos de regresión y permiten llegar a conclusiones sobre \( \beta_1 > 0 \). Por tanto, ambos son modelos válidos para explicar nuestros datos.
+
+Aunque, como conclusión personal, me quedaría con el modelo **GLM**, ya que el modelo del ejercicio 1 transforma la variable dependiente a \( \ln(\text{bpsystol}) \) y también incluye \( \ln(\text{bmi}) \), lo que complica la interpretación de los resultados y dificulta explicar las escalas a personas que no conocen o no comprenden bien qué es un logaritmo. Por lo tanto, el modelo GLM sería una mejor opción.
+
+ 
 

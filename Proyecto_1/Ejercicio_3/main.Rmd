@@ -1,0 +1,362 @@
+---
+author: "Jaime Vera Nancy Jaqueline"
+date: "2025-03-12"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+#Limpiamos entorno
+rm(list = ls(all.names = TRUE))
+
+gc() #Liberamos memoria
+
+knitr::opts_chunk$set(
+	error = F,
+	fig.align = "center",
+	fig.dim = c(5, 3),  
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+#  Insecticidas y sus impactos
+
+```{r cargar datos, include=FALSE}
+# Cargar librerías necesarias
+library(dplyr)      # Para el manejo de datos
+library(ggplot2)    # Para realizar gráficas
+library(kableExtra) # Para un mejor manejo de tablas
+library(GGally)     # Para realizar análisis descriptivo fácilmente
+library(multcomp)   # Para pruebas de hipótesis
+library(car)        # Para funciones útiles de modelos de regresión lineal múltiple
+library(broom)      # Para obtener los residuales estandarizados
+theme_set(theme_minimal()) # Configuración de gráficos
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(purrr)
+#Limpiamos entorno
+rm(list = ls(all.names = TRUE))
+gc() #Liberamos memoria
+
+setwd("C:/Users/ferna/Documents/Seminario_Estadistica/Proyecto_1/Ejercicio_3/Data")
+datos <- read.csv("Preg3vA.csv")
+
+summary(datos)
+```
+Se nos presentan datos sobre insectos expuestos a tres tipos de insecticidas donde se analiza si estos después de seis días. El objetivo es identificar la dosis minima de cada insecticidad que se necesita para que el 70% de los insectos muera y si es posible concluir cual es el más efectivo.
+Comenzamos el análisis presentando los datos a continuación 
+
+```{r grafica1, echo=FALSE}
+
+ggplot(datos, aes(x = Deposit, y = Killed, color = Insecticide)) +
+  geom_point() +
+  labs(title = "Relación entre Dosis y Muertes",
+       x = "Dosis de Insecticida",
+       y = "Insectos Muertos")
+```
+Podemos observar que aparentemente para los tres tipos de insecticidad a mayor cantidad de dosis hay un mayor número de insectos muertos, así mismo, por la distribución de los colores pareciera que el insecticida del tipo C su efectividad está por encima de los otros dos, sin embargo no es posible afirmar esto pues a pesar de que la dosis eran las mismas, los grupos de insectos a los que fueron expuestos eran de distintos tamaños, por lo tanto los efectos no son comparables. 
+Como aquí el evento de interés es si el insecto muere o no (variable del tipo binaria), tenemos como opciones utilizar múltiples modelos,para datos binarios para intentar adaptar nuestros modelo de mejor manera a los datos y poder responder a las preguntas que se hacen sobre el problema. 
+
+```{r renombrar variables, include=FALSE}
+#Una de las ventajas con los datos que se nos proporcionan es que todos son del tipo #numérico a excepción de la variable Inceticide, de manera que antes de iniciar con #la construcción de los modelos transformemos la variable Incecticide a tipo factor
+
+
+#transformamos la variable Incecticide en tipo factor 
+datos$Insecticide <- factor(datos$Insecticide)
+#checamos como se comportan los niveles 
+levels(datos$Insecticide)
+
+#Como la variable de interés es si murieron o no, me conviene modificar mis datos
+#de manera que me presente los datos insecto por insecto, de manera que la variable killed
+#se convertira en una variable de tipo binaria, que es con lo que busco trabajar 
+
+
+```
+
+
+```{r tabla1, include=FALSE}
+#Transformar la tabla 
+#options(repos = c(CRAN = "https://cran.rstudio.com/"))
+#install.packages("tidyverse")
+#install.packages("tidyverse")
+
+
+
+
+names(datos)
+datos1 <- datos %>%
+  group_by(Insecticide, Deposit) %>% 
+  mutate(Killed = map2(Killed, Number, ~ c(rep(1, .x), rep(0, .y - .x)))) %>%  # Expandir Killed
+  unnest(Killed) %>%  # Convertir en filas individuales
+  mutate(Insect_ID = row_number()) %>%  # Asignar un ID único a cada insecto
+  ungroup() %>%  
+  mutate(
+    Deposit = as.numeric(Deposit),
+    Deposit = round(Deposit, 2),
+    lnD = log(Deposit),
+    lnD2 = lnD^2
+  )
+
+head(datos1)
+summary(datos1)
+
+colnames(datos1)[4] <- "Insecticide" 
+datos1 <- subset(datos1, select = -Insect_ID)
+datos1$X <- seq(1 , 862 , by = 1)
+datos1$Insecticide <- factor(datos1$Insecticide)
+# Mostrar los primeros registros
+print(head(datos1))
+
+# Analisis de los datos reagrupados y con la variable Killed en forma binaria 
+summary(datos1)
+#Ahora si tenemos insecto por insecto donde nuestra variable de interes es de forma binaria
+#Tenemos 6 tipos de dosis que se aplicaron y en la variable de Insecticide tenemos 3 
+#categorias diferentes {A,B,C} 
+#Dado que ya tenemos los datos bien identificados vamos a proceder a realizar los modelos 
+```
+
+```{r modelos, include=FALSE}
+#primeros modelos con las ligas: (logit, probit, cloglog) incluyendo como covariables
+#(lnD = ln(Deposit)) y su interacción 
+library(broom)
+
+
+logit_1 <- glm(Killed ~ Insecticide * lnD, family = binomial(link = "logit"), data = datos1)
+probit_1 <- glm(Killed ~ Insecticide * lnD, family = binomial(link = "probit"), data = datos1)
+cloglog_1 <- glm(Killed ~ Insecticide * lnD, family = binomial(link = "cloglog"), data = datos1)
+
+#tambien hacemos los modelos anteriores, pero adicionando la variable cuadrática y 
+#las interacciones 
+
+logit_2 <- glm(Killed ~ Insecticide * lnD + Insecticide * lnD2, family = binomial(link = "logit"), data = datos1)
+probit_2 <- glm(Killed ~ Insecticide * lnD + Insecticide * lnD2, family = binomial(link = "probit"), data = datos1)
+cloglog_2 <- glm(Killed ~ Insecticide * lnD + Insecticide * lnD2, family = binomial(link = "cloglog"), data = datos1)
+
+summary(logit_1)
+summary(probit_1)
+summary(cloglog_1)
+summary(logit_2)
+summary(probit_2)
+summary(cloglog_2)
+
+```
+
+```{r tabla_modelos, echo=FALSE}
+#Guardamos los datos
+#install.packages("kableExtra")
+
+data.frame("Tipo" = c("GLM", "GLM", "GLM", "GLM", "GLM", "GLM"),
+           "Info.Adicional1" = c("Familia:Binomial", "Familia:Binomial", "Familia:Binomial", 
+                                 "Familia:Binomial", "Familia:Binomial", "Familia:Binomial"),
+           "Info.Adicional2" = c("Liga:\nLogit", "Liga:\nProbit", "Liga:\nCLog-log", 
+                                 "Liga:\nLogit", "Liga:\nProbit", "Liga:\nCLog-log"), 
+           "Fórmula" = c("beta_0+beta_1IB + beta_2IC + beta_3lnD + beta_4IB*lnD + beta_5IC*lnD",
+                         "beta_0+beta_1IB + beta_2IC + beta_3lnD + beta_4IB*lnD + beta_5IC*lnD",
+                         "beta_0+beta_1IB + beta_2IC + beta_3lnD + beta_4IB*lnD + beta_5IC*lnD",
+                         "beta_0+beta_1IB + beta_2IC + beta_3lnD + beta_4lnD2 + beta_5IB*lnD + beta_6IC*lnD + beta_7IB*lnD2 + beta_8IB*lnD2",
+                         "beta_0+beta_1IB + beta_2IC + beta_3lnD + beta_4lnD2 + beta_5IB*lnD + beta_6IC*lnD + beta_7IB*lnD2 + beta_8IB*lnD2",
+                         "beta_0+beta_1IB + beta_2IC + beta_3lnD + beta_4lnD2 + beta_5IB*lnD + beta_6IC*lnD + beta_7IB*lnD2 + beta_8IB*lnD2"), 
+           "AIC" = c(809.42, 809.13, 821.88, 803.09, 803.1, 802.83)) %>% 
+  kbl(booktabs = TRUE, align = "c") %>% 
+  kable_styling(latex_options = c("striped", "scale_down"))
+```
+
+Tras realizar múltiples pruebas, se lorgró determinar que el mejor modelo, fue un modelo de regresión lineal multiple Binomial con función liga cLog-log con término cuadrático ,esto se obtuvo a partir de la tabla siguiente.
+Tenemos que la ventaja de incluir términos cuadráticos:
+*Permite capturar relaciones no lineales entre la dosis y la mortalidad.
+*Puede mejorar la capacidad predictiva del modelo si la relación no es simplemente log-lineal.
+*Si los coeficientes cuadráticos son significativos, indica que el efecto de la dosis varía en diferentes niveles.
+
+```{r supuestos,include=FALSE}
+#verificación de supuestos 
+
+## Linealidad
+#Con el paquete Car
+residualPlots(cloglog_2)
+plot(cloglog_2,1)
+
+## Homocedasticidad 
+
+
+
+datos1$residuals <- residuals(cloglog_2, type = "pearson")
+
+ggplot(datos1, aes(x = lnD, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", col = "red") +
+  labs(title = "Residuos Pearson vs lnD",
+       x = "lnD",
+       y = "Residuos Pearson")
+
+#Realizamos gráficas  
+plot(cloglog_2, 3)
+
+#Para la normalidad
+
+#Presentamos la q-q plot
+plot(cloglog_2, 2)
+
+summary(cloglog_2)
+
+anova( cloglog_1, cloglog_2)
+
+
+```
+Posterior a la verificación de supuestos y haciendo uso de la comparación ANOVA para el modelo reducido y el modelo con variable cuadratica podemos decir que no hay evidencia en contra de que nuestro modelo con variable cuadrática es la mejor opcion para que ajustar nuestros datos. 
+
+
+```{r modelo aplicado, echo=FALSE}
+# Agregar el modelo escogido a  la primer gráfica 
+# Crear un nuevo conjunto de datos para predicciones
+nuevo_datos <- datos1 %>%
+  group_by(Insecticide, Deposit) %>%
+  summarise(lnD = log(Deposit),
+            lnD2 = lnD^2) %>%
+  ungroup()
+
+# Agregar predicciones
+nuevo_datos$probabilidad_muerte <- predict(cloglog_2, newdata = nuevo_datos, type = "response")
+
+# Graficar los puntos originales y la línea de estimación
+ggplot(datos, aes(x = Deposit, y = Killed / Number, color = Insecticide)) +
+  geom_point() +  # Datos observados
+  geom_line(data = nuevo_datos, aes(x = Deposit, y = probabilidad_muerte, color = Insecticide), size = 1) +
+  labs(title = "Relación entre Dosis y Probabilidad de Muerte",
+       x = "Dosis de Insecticida",
+       y = "Probabilidad de Muerte")
+```
+Aplicando nuestro modelo escoido a nuestros datos se puede observar que efectivamente los ajusta bien, por lo tanto nos sera de utilidad para contestarnos algunas preguntas. 
+
+## ¿Cuál es la dosis mínima para cada insecticida con la que se puede indicar que el 70 % de los insectos se muere?
+
+
+```{r pregunta1, include=FALSE}
+library(dplyr)
+
+# Obtener los coeficientes del modelo cLog-log con término cuadrático
+coefs <- coef(cloglog_2)
+
+# Valor de cloglog(0.7) porque se aplica la función inversa a los dos lados 
+# LLa funcion se ve asi g^-1(eta) = mu= 1 - exp(-exp(eta))
+#calculamos el termino en 0.7 porque queremos resolver los sistemas de ecuaciones para cada 
+#insecticida y asi obtener la probabilidad 
+
+cloglog_70 <- log(-log(1 - 0.7))
+
+# Creamos una funcion que nos resuelva para los diferentes datos de cada insecticida 
+dosis<- function(tipo) {
+  if (tipo == "A") {
+    beta <- coefs[c("(Intercept)", "lnD", "lnD2")]
+  } else if (tipo == "B") {
+    beta <- coefs[c("(Intercept)", "lnD", "lnD2")] + coefs[c("InsecticideB", "InsecticideB:lnD", "InsecticideB:lnD2")]
+  } else {
+    beta <- coefs[c("(Intercept)", "lnD", "lnD2")] + coefs[c("InsecticideC", "InsecticideC:lnD", "InsecticideC:lnD2")]
+  }
+  
+
+  a <- beta["lnD2"]
+  b <- beta["lnD"]
+  c <- beta["(Intercept)"] - cloglog_70
+  
+  # Fórmula general para encontrar ln(D)
+  lnD_sol <- (-b + sqrt(b^2 - 4 * a * c)) / (2 * a)
+  
+  # Convertirmos a Dosis (D)
+  D_sol <- exp(lnD_sol)
+  return(D_sol)
+}
+
+# Calculamos la dosis mínima para cada insecticida
+dosis_minA <- dosis("A")
+dosis_minB <- dosis("B")
+dosis_minC <- dosis("C")
+
+# Resultados
+cat("Dosis mínima para que muera el 70% de los insectos:\n")
+cat("Insecticida A:", dosis_minA, "\n")
+cat("Insecticida B:", dosis_minB, "\n")
+cat("Insecticida C:", dosis_minC, "\n")
+
+```
+
+Aplicando la función inversa para el calculo de probabilidades optenemos los siguientes resultados para cada insecticida. 
+```{r resultados_pregunta1, echo=FALSE , results='asis'}
+
+
+df <- data.frame("Insecticida" = c("A", "B", "C"),
+                 "Dosis Minima" = c(dosis_minA, dosis_minB, dosis_minC))
+
+# Tabla de resultados 
+df %>%
+  kbl(booktabs = TRUE, align = "c") %>%
+  kable_styling(latex_options = c("striped", "scale_down"))
+kable(df, caption = "Dosis Mínimas por Insecticida")
+```
+
+
+
+## Considerando sólo la menor de las dosis encontradas en b), ¿se puede indicar que insecticida es el mejor? 
+
+Por los resultados anteriores tenemos que el insecticida con menor dosis encontrada es el insecticida C, que gracias a una prueba de hipotesis donde se comparo con los otros dos insecticidad podemos decir que si hay diferencias significativas en la mortalidad del insecticida con menor dosis respecto a los otros. 
+Pero, dado que si hay diferencia en su efectividad, ahora nos podemos preguntarnos en ¿Qué hay entre la efectividad del insecticida A y B?.Bueno, pues eso nos lleva a la siguiente pregunta. 
+
+
+
+## En general ¿Se puede indicar que los insecticidas A y B tienen un desempeño similar?
+Con ayuda de la comparación de un modelo reducido y uno completo con relacion entre las muertes y las dosis del insecticida A y B se concluyo que no hay evidencia suficiente para afirmar que los insecticidas A y B sean distintos en desempeño. 
+
+```{r comparacion insecticida A y B , include=FALSE}
+library(dplyr)
+
+
+datos_AB <- datos1 %>% filter(Insecticide %in% c("A", "B"))
+datos_AB$Insecticide <- factor(datos_AB$Insecticide, levels = c("A", "B"))
+
+# Modelo reducido: Asumimos que A y B tienen el mismo efecto
+modelo_reducido <- glm(Killed ~ lnD, family = binomial(link = "cloglog"), data = datos_AB)
+
+# Modelo completo: Permitimos que A y B tengan efectos distintos
+modelo_completo <- glm(Killed ~ Insecticide + lnD, family = binomial(link = "cloglog"), data = datos_AB)
+
+# Prueba ANOVA para comparar los dos modelos 
+anova_test <- anova(modelo_reducido, modelo_completo, test = "Chisq")
+
+
+# Interpretación del resultado
+if (anova_test$`Pr(>Chi)`[2] < 0.05) {
+  cat("Conclusión: Hay evidencia significativa de que los insecticidas A y B tienen desempeños diferentes.\n")
+} else {
+  cat("Conclusión: No hay evidencia suficiente para afirmar que los insecticidas A y B sean distintos en desempeño.\n")
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
